@@ -32,6 +32,14 @@ chmod 0777 /dev/thp
 setprop twrp.avr.touch.prepared 1
 
 # --- ADSP (pmic-glink: battery level, charger state, USB-C) ---
+# Android's vendor.ssr_setup (persist.vendor.ssr.restart_level=ALL_ENABLE)
+# lets a crashed subsystem restart on its own; it does not run in recovery,
+# where a remoteproc crash would otherwise take the whole device down.
+# Nobody collects ramdumps here either, so don't wait for one.
+for r in /sys/class/remoteproc/remoteproc*; do
+    [ -w "$r/recovery" ] && echo enabled > "$r/recovery"
+    [ -w "$r/coredump" ] && echo disabled > "$r/coredump"
+done
 if [ -e /sys/kernel/boot_adsp/boot ]; then
     echo 1 > /sys/kernel/boot_adsp/boot
     i=0
