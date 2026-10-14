@@ -1,3 +1,20 @@
+diff --git a/android/paths.go b/android/paths.go
+index 40c8e22..3f4327e 100644
+--- a/android/paths.go
++++ b/android/paths.go
+@@ -2126,6 +2126,12 @@ func pathForInstall(ctx PathContext, os OsType, arch ArchType, partition string,
+ 		if os.Class == Host && (arch == X86_64 || arch == Common) {
+ 			archName = "x86"
+ 		}
++		// On non-x86 build hosts (aarch64 Linux), arch-independent host
++		// modules (Java tools) belong next to the native host tools, which is
++		// where HostToolPath and Make's HOST_OUT look for them.
++		if os.Class == Host && arch == Common && ctx.Config().BuildArch != X86_64 {
++			archName = ctx.Config().BuildArch.String()
++		}
+ 		partitionPaths = []string{"host", osName + "-" + archName, partition}
+ 	}
+ 
 diff --git a/rust/bindgen.go b/rust/bindgen.go
 index 2f84168..85cd13f 100644
 --- a/rust/bindgen.go
