@@ -64,6 +64,7 @@ jobs:
       run: |
         mkdir -p device/motorola
         mv device-tree device/motorola/avr
+        device/motorola/avr/scripts/apply-source-patches.sh .
         for v in AVR_OS_VERSION AVR_OS_PATCH AVR_VENDOR_PATCH; do
           val=$(sed -n "s/^$v := //p" device/motorola/avr/BoardConfig.mk)
           [ -n "$val" ] || { echo "$v not set"; exit 1; }
