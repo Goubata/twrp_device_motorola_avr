@@ -1,0 +1,7 @@
+<!--
+    Base device manifest for the avr (XT2611) recovery ramdisk.
+    The HALs themselves are declared by the stock fragments copied to
+    /vendor/etc/vintf/manifest/ (see proprietary-files.txt).
+-->
+<manifest version="9.0" type="device" target-level="202504">
+</manifest>

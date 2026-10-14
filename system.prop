@@ -1,0 +1,11 @@
+# motorola avr (XT2611) recovery properties.
+# Only values that the installed system also has (see getprop on the device).
+
+ro.boot.dynamic_partitions=true
+
+# Encryption
+ro.crypto.type=file
+ro.crypto.metadata.enabled=true
+
+# QTI Gatekeeper runs in QTEE, not on the SPU
+vendor.gatekeeper.is_security_level_spu=0

@@ -1,0 +1,4 @@
+# avr recovery: the modem partition is mounted at /firmware (see
+# init.recovery.qcom.rc); let the firmware loader find ADSP images there even
+# while TWRP has the real vendor partition mounted over /vendor.
+firmware_directories /firmware/image/

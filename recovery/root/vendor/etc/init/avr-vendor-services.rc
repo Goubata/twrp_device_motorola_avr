@@ -1,0 +1,77 @@
+# Vendor services used in recovery (motorola avr / XT2611).
+# Based on the stock rc files in /vendor/etc/init; every service is started
+# explicitly from init.recovery.qcom.rc, runs in the recovery domain and
+# prefers the vendor copies of libraries (the default LD_LIBRARY_PATH in
+# recovery starts with /system/lib64).
+
+# --- QTEE / KeyMint ---------------------------------------------------------
+
+service vendor.qseecomd /vendor/bin/qseecomd
+    user root
+    group root drmrpc
+    socket notify-topology stream 660 system drmrpc
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib64/hw:/system/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+service vendor.minkdaemon /vendor/bin/hlosminkdaemon
+    user system
+    group system oem_2912 wakelock
+    capabilities WAKE_ALARM BLOCK_SUSPEND
+    socket ssgtzd stream 0660 system oem_2912
+    socket hlos_mink_opener stream 0660 system system
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib64/hw:/system/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+service vendor.keymint /vendor/bin/hw/android.hardware.security.onekeymint-service-qti
+    user system
+    group system drmrpc
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib64/hw:/system/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+service vendor.gatekeeper_default /vendor/bin/hw/android.hardware.gatekeeper-rust-service-qti
+    user system
+    group system
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib64/hw:/system/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+service vendor.secretkeeper /vendor/bin/hw/android.hardware.security.secretkeeper-service-qti
+    user nobody
+    group drmrpc
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib64/hw:/system/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+# --- Boot control (slot switching from the reboot menu) ---------------------
+
+service vendor.boot-qti /vendor/bin/hw/android.hardware.boot-service.qti
+    user root
+    group root
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib64/hw:/system/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+# --- Haptics (open loop, qcom-hv-haptics) ----------------------------------
+
+service vendor.qti.vibrator /vendor/bin/hw/vendor.qti.hardware.vibrator.service
+    user system
+    group system input wakelock
+    capabilities BLOCK_SUSPEND
+    setenv RICHTAP_DEVICE_PATH /dev/qcom_haptic
+    setenv ENV_RICHTAP_CONFIG_PATH /vendor/etc/aac_richtap.config
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib64/hw:/system/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+# --- Touch (Goodix THP host processing) ------------------------------------
+
+service vendor.odm_tsc /vendor/bin/odm_tsc
+    user system
+    group system
+    capabilities SYS_NICE
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib64/hw:/system/lib64
+    disabled
+    seclabel u:r:recovery:s0

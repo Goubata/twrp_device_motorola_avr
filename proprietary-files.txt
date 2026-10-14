@@ -1,0 +1,76 @@
+# recovery ramdisk に入れる avr (XT2611) の vendor ファイル。
+# 1行1ファイル、パスは vendor/odm/modem の dump からの相対パス。
+# NEEDED の依存は extract-files.sh が再帰的に追加する。
+# ここに列挙するのは dlopen されるものと、ELF 以外のデータファイル。
+
+# --- QTEE / KeyMint / Gatekeeper ---
+vendor/bin/qseecomd
+vendor/bin/hlosminkdaemon
+vendor/bin/hw/android.hardware.security.onekeymint-service-qti
+vendor/bin/hw/android.hardware.gatekeeper-rust-service-qti
+vendor/bin/hw/android.hardware.security.secretkeeper-service-qti
+# qseecomd の listener (dlopen)
+vendor/lib64/libGPreqcancel.so
+vendor/lib64/libGPreqcancel_svc.so
+vendor/lib64/libdrmtime.so
+vendor/lib64/libgpt.so
+vendor/lib64/libops.so
+vendor/lib64/libqisl.so
+vendor/lib64/librpmb.so
+vendor/lib64/libspl.so
+vendor/lib64/libtime_genoff.so
+# QTEE クライアント系（参考: TWRP-Test sm8850 ツリーで同梱されているもの）
+vendor/lib64/libGPMTEEC_vendor.so
+vendor/lib64/libGPTEE_vendor.so
+vendor/lib64/libtaautoload.so
+vendor/lib64/libvmmem.so
+vendor/lib64/libkeymaster_messages.so
+vendor/lib64/libkeymaster_portable.so
+vendor/lib64/libsoft_attestation_cert.so
+vendor/lib64/libcppbor.so
+vendor/lib64/libcppbor_external.so
+vendor/lib64/libcppcose_rkp.so
+vendor/lib64/android.hardware.security.keymint-V3-ndk.so
+vendor/lib64/android.hardware.security.rkp-V3-ndk.so
+vendor/lib64/android.hardware.security.secureclock-V1-ndk.so
+vendor/lib64/android.hardware.security.sharedsecret-V1-ndk.so
+vendor/etc/gpfspath_oem_config.xml
+vendor/etc/ssg/ta_config.json
+vendor/etc/ssg/tz_whitelist.json
+vendor/etc/vintf/manifest/android.hardware.security.onekeymint-service-qti.xml
+vendor/etc/vintf/manifest/android.hardware.gatekeeper-service-qti.xml
+vendor/etc/vintf/manifest/android.hardware.security.secretkeeper-service-qti.xml
+vendor/etc/vintf/manifest/android.hardware.security.secureclock-service-qti.xml
+vendor/etc/vintf/manifest/android.hardware.security.sharedsecret-service-qti.xml
+# modem_a:/image にある TA（qseecomd が /vendor/firmware_mnt/image から読む）
+modem/image/05B04A44-BF30-42DF-9E2F-B366B980ED19.*:vendor/firmware_mnt/image/
+modem/image/32552B22-89FE-42B4-8A45-A0C4E2DB0326.*:vendor/firmware_mnt/image/
+modem/image/FD719D50-FFFB-11EB-9A03-0242AC130003.*:vendor/firmware_mnt/image/
+modem/image/gptauuid.*:vendor/firmware_mnt/image/
+
+# --- Boot control (スロット切り替え) ---
+vendor/bin/hw/android.hardware.boot-service.qti
+vendor/lib64/libboot_control_qti.so
+vendor/etc/vintf/manifest/boot-service.qti.xml
+
+# --- タッチ (Goodix THP) ---
+vendor/bin/odm_tsc
+vendor/lib64/libgdix_tsc.so
+vendor/etc/thp/goodix_config.cfg
+vendor/etc/thp/goodix_firmware.bin
+vendor/etc/thp/thp_cfg_9916.bin
+vendor/etc/thp/odm_tsc_cfg.ini
+
+# --- バイブ (QTI AIDL vibrator, open loop) ---
+vendor/bin/hw/vendor.qti.hardware.vibrator.service
+vendor/lib64/vendor.qti.hardware.vibrator.impl.so
+vendor/lib64/vendor.qti.hardware.vibratorCL.impl.so
+vendor/lib64/vendor.qti.hardware.vibratorOL.impl.so
+vendor/lib64/vendor.qti.hardware.vibratorSel.impl.so
+vendor/lib64/libqtivibratoreffect.so
+vendor/etc/HapticsPolicy.xml
+vendor/etc/vintf/manifest/vendor.qti.hardware.vibrator.service.xml
+odm/etc/aac_richtap.config:vendor/etc/aac_richtap.config
+
+# --- デバイスノードの権限 ---
+vendor/etc/ueventd.rc

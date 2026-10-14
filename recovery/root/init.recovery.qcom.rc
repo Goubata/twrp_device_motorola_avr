@@ -1,0 +1,87 @@
+# motorola avr (XT2611) recovery init
+#
+# TWRP mounts the real vendor partition over /vendor several times while it
+# starts (loading vendor_dlkm modules, setting up APEX). Any vendor service
+# that is exec'ed during such a window runs from the real partition, keeps it
+# busy, and gets killed when TWRP unmounts it. So:
+#   fs        persist + modem firmware, then exec every QTEE/KeyMint service
+#             from the ramdisk (KeyMint/Gatekeeper wait for the QTEE
+#             listeners themselves)
+#   post-fs   boot-control + vibrator HALs, then block init until KeyMint and
+#             Gatekeeper are registered (TWRP itself only starts on "boot")
+#   twrp.modules.loaded=true
+#             avr-post-modules.sh waits for TWRP to release /vendor, then
+#             prepares and starts the touch daemon and boots the ADSP
+#
+# KeyMint reads ro.build.version.release / ro.build.version.security_patch /
+# ro.vendor.build.security_patch when it starts. They are baked into the
+# ramdisk with the installed system's values (BoardConfig.mk AVR_*), and
+# /system/bin/resyncapex.sh stops KeyMint before decryption if they do not
+# match the installed system (e.g. after an OTA without rebuilding TWRP).
+
+on early-fs
+    write /proc/sys/walt/sched_lib_name "recovery,magiskboot,Updater,updater,update_engine_sideload"
+    write /proc/sys/walt/sched_lib_mask_force 255
+
+on fs
+    wait /dev/block/platform/soc/${ro.boot.bootdevice}
+    symlink /dev/block/platform/soc/${ro.boot.bootdevice} /dev/block/bootdevice
+    write /proc/sys/kernel/firmware_config/force_sysfs_fallback 1
+
+    # QTEE device nodes (also covered by the vendor ueventd.rc)
+    chmod 0660 /dev/qseecom
+    chown system drmrpc /dev/qseecom
+    chmod 0664 /dev/ion
+    chown system system /dev/ion
+
+    # persist: QTEE secure file system (libdrmfs)
+    mkdir /mnt/vendor 0775 root system
+    mkdir /mnt/vendor/persist 0771 root system
+    wait /dev/block/bootdevice/by-name/persist
+    mount ext4 /dev/block/bootdevice/by-name/persist /mnt/vendor/persist noatime nosuid nodev barrier=1
+
+    # The modem partition (ext4) holds the ADSP firmware and QTEE TAs. Mount
+    # it outside /vendor so TWRP mounting the real vendor over /vendor never
+    # hides it, then bind it to the path Android uses.
+    mkdir /firmware 0771 system system
+    wait /dev/block/bootdevice/by-name/modem${ro.boot.slot_suffix}
+    mount ext4 /dev/block/bootdevice/by-name/modem${ro.boot.slot_suffix} /firmware ro nosuid nodev context=u:object_r:firmware_file:s0
+    mount none /firmware /vendor/firmware_mnt bind
+    write /sys/module/firmware_class/parameters/path /firmware/image
+
+    install_keyring
+    start vendor.qseecomd
+    start vendor.minkdaemon
+    start vendor.keymint
+    start vendor.gatekeeper_default
+    start vendor.secretkeeper
+
+on post-fs
+    # Haptics: same setup as the stock vendor.qti.hardware.vibrator.service.rc
+    wait /dev/qcom_haptic 1.5
+    chmod 0666 /dev/qcom_haptic
+    chown system system /dev/qcom_haptic
+    write /sys/class/leds/vibrator/trigger "transient"
+    start vendor.boot-qti
+    start vendor.qti.vibrator
+    exec_start vendor.avr-crypto-wait
+
+on property:twrp.modules.loaded=true
+    start vendor.avr-post-modules
+
+on property:twrp.avr.touch.prepared=1
+    start vendor.odm_tsc
+
+service vendor.avr-crypto-wait /system/bin/sh /system/bin/avr-crypto-wait.sh
+    user root
+    group root
+    oneshot
+    disabled
+    seclabel u:r:recovery:s0
+
+service vendor.avr-post-modules /system/bin/sh /system/bin/avr-post-modules.sh
+    user root
+    group root
+    oneshot
+    disabled
+    seclabel u:r:recovery:s0
