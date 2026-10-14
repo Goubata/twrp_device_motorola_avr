@@ -23,7 +23,9 @@ on early-init
     # Diagnostics: let init's messages reach the console so they are kept in
     # pstore (console-ramoops) and can be read from Android after a failed
     # recovery boot. TWRP's own log is mirrored to kmsg by avr-logtee.
-    write /proc/sys/kernel/printk "8 4 1 7"
+    # 7, not 8: KERN_DEBUG floods the 256 KiB console buffer (dwc3 alone
+    # filled it within seconds).
+    write /proc/sys/kernel/printk "7 4 1 7"
 
 on early-fs
     write /proc/sys/walt/sched_lib_name "recovery,magiskboot,Updater,updater,update_engine_sideload"
@@ -86,6 +88,14 @@ on property:twrp.avr.touch.prepared=1
 
 on property:init.svc.recovery=running
     start vendor.avr-logtee
+    start vendor.avr-diag
+
+service vendor.avr-diag /system/bin/sh /system/bin/avr-diag.sh
+    user root
+    group root
+    oneshot
+    disabled
+    seclabel u:r:recovery:s0
 
 service vendor.avr-logtee /system/bin/sh /system/bin/avr-logtee.sh
     user root
