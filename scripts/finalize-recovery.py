@@ -156,7 +156,8 @@ ok(f"{checked} ELF files resolved")
 print("== 4. executable modes")
 exe = [r for r in modes if r.startswith("vendor/bin/") and not modes[r].startswith("d")]
 exe += ["system/bin/service", "system/bin/resyncapex.sh",
-        "system/bin/avr-crypto-wait.sh", "system/bin/avr-post-modules.sh"]
+        "system/bin/avr-crypto-wait.sh", "system/bin/avr-post-modules.sh",
+        "system/bin/avr-logtee.sh"]
 for r in exe:
     m = modes.get(r)
     if m is None:
