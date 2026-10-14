@@ -57,6 +57,14 @@ else
     git -C "$SRC/prebuilts/rust" apply "$PATCH"
 fi
 
+echo "== prebuilts/build-tools: enable the linux-arm64 bison/flex/m4/make"
+PATCH="$(dirname "$(realpath "$0")")/arm64-host/prebuilts-build-tools.patch"
+if git -C "$SRC/prebuilts/build-tools" apply --reverse --check "$PATCH" 2>/dev/null; then
+    echo "   already applied"
+else
+    git -C "$SRC/prebuilts/build-tools" apply "$PATCH"
+fi
+
 echo "== Go"
 rm -rf "$SRC/prebuilts/go/linux-arm64"
 cp -a "$TC/go-arm64" "$SRC/prebuilts/go/linux-arm64"
