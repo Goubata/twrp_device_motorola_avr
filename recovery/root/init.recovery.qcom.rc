@@ -9,8 +9,9 @@
 #             listeners themselves)
 #   post-fs   boot-control + vibrator HALs, then block init until KeyMint and
 #             Gatekeeper are registered (TWRP itself only starts on "boot")
-#   twrp.modules.loaded=true
-#             avr-post-modules.sh waits for TWRP to release /vendor, then
+#   TWRP running
+#             avr-post-modules.sh waits for twrp.modules.loaded (max 30 s)
+#             and for TWRP to release /vendor, then
 #             prepares and starts the touch daemon and boots the ADSP
 #
 # KeyMint reads ro.build.version.release / ro.build.version.security_patch /
@@ -80,8 +81,6 @@ on post-fs
     start vendor.qti.vibrator
     exec_start vendor.avr-crypto-wait
 
-on property:twrp.modules.loaded=true
-    start vendor.avr-post-modules
 
 on property:twrp.avr.touch.prepared=1
     start vendor.odm_tsc
@@ -89,6 +88,9 @@ on property:twrp.avr.touch.prepared=1
 on property:init.svc.recovery=running
     start vendor.avr-logtee
     start vendor.avr-diag
+    # Waits for twrp.modules.loaded itself (and goes on without it after 30 s),
+    # so touch and ADSP are brought up even if TWRP's module loading failed.
+    start vendor.avr-post-modules
 
 service vendor.avr-diag /system/bin/sh /system/bin/avr-diag.sh
     user root

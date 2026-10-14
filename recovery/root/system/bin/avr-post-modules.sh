@@ -1,10 +1,18 @@
 #!/system/bin/sh
-# Started when TWRP has loaded the vendor_dlkm modules (twrp.modules.loaded).
-# TWRP still has the real vendor/vendor_dlkm partitions mounted at that
-# moment, so wait until it lets go of /vendor before touching anything that
-# would otherwise be read from (and keep busy) the real partition.
+# Started when TWRP starts. Waits until TWRP has loaded the vendor_dlkm
+# modules (twrp.modules.loaded, max 30 s). TWRP still has the real
+# vendor/vendor_dlkm partitions mounted at that moment, so also wait until it
+# lets go of /vendor before touching anything that would otherwise be read
+# from (and keep busy) the real partition.
 
 say() { echo "avr-post-modules: $*" > /dev/kmsg 2>/dev/null; }
+
+i=0
+while [ "$(getprop twrp.modules.loaded)" != true ] && [ $i -lt 300 ]; do
+    sleep 0.1
+    i=$((i + 1))
+done
+[ "$(getprop twrp.modules.loaded)" = true ] || say "WARNING: twrp.modules.loaded not set after 30 s, continuing"
 
 i=0
 while grep -q ' /vendor ' /proc/mounts && [ $i -lt 100 ]; do
@@ -12,6 +20,22 @@ while grep -q ' /vendor ' /proc/mounts && [ $i -lt 100 ]; do
     i=$((i + 1))
 done
 grep -q ' /vendor ' /proc/mounts && say "WARNING: /vendor still mounted after 10 s"
+
+# --- Goodix THP touch: driver fallback ---
+# TWRP loads the touch driver chain from the installed vendor_dlkm
+# (TW_LOAD_VENDOR_MODULES). If that did not happen, load the copies shipped
+# in the ramdisk, in dependency order (minidump, smem and
+# panel_event_notifier come from vendor_boot's modules.load.recovery).
+if [ ! -d /sys/module/goodix_brl_thp ]; then
+    say "goodix_brl_thp not loaded by TWRP, loading ramdisk copies"
+    for m in mmi_annotate mmi_info sensors_class mmi_relay touchscreen_mmi goodix_brl_thp; do
+        [ -d /sys/module/$m ] && continue
+        out=$(insmod /vendor/lib/modules/avr-touch/$m.ko 2>&1) || say "insmod $m failed: $out"
+    done
+    i=0
+    while [ ! -e /dev/thp ] && [ $i -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
+fi
+[ -d /sys/module/goodix_brl_thp ] && say "goodix_brl_thp loaded" || say "goodix_brl_thp NOT loaded"
 
 # --- Goodix THP touch ---
 # odm_tsc reads its tuning/firmware files from /data/vendor/touchscreen/fw.
