@@ -13,6 +13,8 @@
 #                   90b35a62 as AOSP's 1.83.0-dev); musl so proc-macros built
 #                   for the musl host can be loaded
 #   JDK 21          Ubuntu openjdk-21
+#   bindgen libclang  Alpine v3.22 clang19-libclang (musl aarch64, RUNPATH
+#                   $ORIGIN), fetched by toolchains/alpine/fetch.py
 # Anything else that is still x86 runs through binfmt_misc (qemu-user).
 #
 # usage: setup-arm64-host.sh <twrp source dir> <toolchains dir>
@@ -37,6 +39,14 @@ if git -C "$SRC/build/make" apply --reverse --check "$PATCH" 2>/dev/null; then
     echo "   already applied"
 else
     git -C "$SRC/build/make" apply "$PATCH"
+fi
+
+echo "== build/soong: bindgen libclang for aarch64 hosts"
+PATCH="$(dirname "$(realpath "$0")")/arm64-host/build-soong.patch"
+if git -C "$SRC/build/soong" apply --reverse --check "$PATCH" 2>/dev/null; then
+    echo "   already applied"
+else
+    git -C "$SRC/build/soong" apply "$PATCH"
 fi
 
 echo "== Go"
@@ -85,6 +95,15 @@ echo "   resource dir: $(./clang -print-resource-dir)"
 [ "$(./clang -print-resource-dir)" = "$ARM/lib/clang/20" ] || { echo "unexpected resource dir"; exit 1; }
 left=$(for f in *; do if [ ! -L "$f" ] && file -b "$f" | grep -q x86-64; then echo "$f"; fi; done | xargs)
 echo "   still x86 (run via binfmt if used): $left"
+
+echo "== bindgen clang (clang-r530567): musl libclang from Alpine, native clang"
+B="$SRC/prebuilts/clang/host/linux-arm64/clang-r530567"
+rm -rf "$B"
+mkdir -p "$B/bin" "$B/musl/lib"
+cp -a "$TC/alpine/libclang19/." "$B/musl/lib/"
+ln -s ../../clang-r547379/bin/clang-20 "$B/bin/clang"
+(cd / && /lib/ld-musl-aarch64.so.1 --list "$B/musl/lib/libclang.so" >/dev/null) || { echo "musl libclang does not load"; exit 1; }
+"$B/bin/clang" --version | head -1
 
 echo "== Rust $RUST_VER (Soong uses linux-musl-x86 for every musl host)"
 R="$SRC/prebuilts/rust/linux-musl-x86/$RUST_VER"

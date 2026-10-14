@@ -1,0 +1,17 @@
+diff --git a/rust/bindgen.go b/rust/bindgen.go
+index 2f84168..85cd13f 100644
+--- a/rust/bindgen.go
++++ b/rust/bindgen.go
+@@ -41,7 +41,11 @@ var (
+ 	//TODO(b/160803703) Use a prebuilt bindgen instead of the built bindgen.
+ 	_ = pctx.HostBinToolVariable("bindgenCmd", "bindgen")
+ 	_ = pctx.VariableFunc("bindgenHostPrebuiltTag", func(ctx android.PackageVarContext) string {
+-		if ctx.Config().UseHostMusl() {
++		if ctx.Config().PrebuiltOS() == "linux-arm64" {
++			// aarch64 Linux host: musl libclang provided under linux-arm64
++			// (see device setup-arm64-host.sh)
++			return "linux-arm64"
++		} else if ctx.Config().UseHostMusl() {
+ 			// This is a hack to use the glibc bindgen binary until we have a musl version checked in.
+ 			return "linux-x86"
+ 		} else {
