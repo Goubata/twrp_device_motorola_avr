@@ -90,6 +90,10 @@ ln -sf clang-20 clang
 ln -sf clang-20 clang++
 ln -sf clang-20 clang++.real
 for l in ld.lld ld64.lld lld-link wasm-ld; do ln -sf lld "$l"; done
+# Builtin headers (arm_neon.h, ...) must match the compiler binary exactly;
+# keep AOSP's runtimes (lib/clang/20/lib) but take the headers from the
+# Ubuntu clang that now runs (AOSP-only extras such as omp.h are kept).
+rsync -aL /usr/lib/llvm-20/lib/clang/20/include/ "$ARM/lib/clang/20/include/"
 ./clang --version | head -1
 echo "   resource dir: $(./clang -print-resource-dir)"
 [ "$(./clang -print-resource-dir)" = "$ARM/lib/clang/20" ] || { echo "unexpected resource dir"; exit 1; }
