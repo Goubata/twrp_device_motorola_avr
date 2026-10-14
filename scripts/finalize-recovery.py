@@ -91,6 +91,18 @@ for root, _, files in os.walk(rd):
             k, _, v = line.strip().partition("=")
             if k in want:
                 found[k].append((os.path.relpath(p, rd), v))
+# Not KeyMint, but odm_tsc (touch) cannot work without it: libgdix_tsc
+# dlopens libgdix_<ro.vendor.touch.tsa_name>.so.
+want["ro.vendor.touch.tsa_name"] = "gdix_tsa_avr"
+found["ro.vendor.touch.tsa_name"] = []
+for root, _, files in os.walk(rd):
+    for fn in files:
+        p = os.path.join(root, fn)
+        if (fn.endswith(".prop") or fn in ("prop.default", "default.prop")) and not os.path.islink(p):
+            for line in open(p, errors="replace"):
+                k, _, v = line.strip().partition("=")
+                if k == "ro.vendor.touch.tsa_name":
+                    found[k].append((os.path.relpath(p, rd), v))
 for k, v in want.items():
     if not found[k]:
         err(f"{k} is not defined anywhere in the ramdisk")

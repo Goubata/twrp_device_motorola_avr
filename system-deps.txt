@@ -1,7 +1,7 @@
 # vendor blob が必要とし、TWRP 側（/system/lib64 など）にあるべきライブラリ
 libbinder_ndk.so	# 22 files, e.g. vendor/bin/hw/android.hardware.boot-service.qti
-libc.so	# 77 files, e.g. vendor/bin/hlosminkdaemon
-libdl.so	# 74 files, e.g. vendor/bin/hlosminkdaemon
-liblog.so	# 49 files, e.g. vendor/bin/hlosminkdaemon
-libm.so	# 74 files, e.g. vendor/bin/hlosminkdaemon
+libc.so	# 80 files, e.g. vendor/bin/hlosminkdaemon
+libdl.so	# 77 files, e.g. vendor/bin/hlosminkdaemon
+liblog.so	# 52 files, e.g. vendor/bin/hlosminkdaemon
+libm.so	# 77 files, e.g. vendor/bin/hlosminkdaemon
 libvndksupport.so	# 2 files, e.g. vendor/lib64/libhidlbase.so

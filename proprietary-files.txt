@@ -56,6 +56,11 @@ vendor/etc/vintf/manifest/boot-service.qti.xml
 # --- タッチ (Goodix THP) ---
 vendor/bin/odm_tsc
 vendor/lib64/libgdix_tsc.so
+# libgdix_tsc が実行時に dlopen する（NEEDED には出ない）。
+# TSA は ro.vendor.touch.tsa_name から名前を決める
+vendor/lib64/libgdix_tsa_avr.so
+vendor/lib64/libgdix_afe.so
+vendor/lib64/libgdix_tsd.so
 vendor/etc/thp/goodix_config.cfg
 vendor/etc/thp/goodix_firmware.bin
 vendor/etc/thp/thp_cfg_9916.bin

@@ -50,9 +50,15 @@ chown -R system:system /data/vendor/touchscreen /data/vendor/touchrec
 chmod 0750 /data/vendor/touchscreen "$FW" /data/vendor/touchscreen/logs
 chmod 0640 "$FW"/*
 chmod 0773 /data/vendor/touchrec
-[ -e /dev/thp ] || say "WARNING: /dev/thp missing (goodix_brl_thp not loaded?)"
-chown root:root /dev/thp
-chmod 0777 /dev/thp
+# Same owner/modes as the stock vendor ueventd.rc (in the ramdisk, so
+# ueventd normally sets them already). odm_tsc runs as system and opens both.
+for n in thp input_agent; do
+    [ -e /dev/$n ] || say "WARNING: /dev/$n missing (goodix_brl_thp not loaded?)"
+done
+chown system:system /dev/thp /dev/input_agent
+chmod 0666 /dev/thp
+chmod 0660 /dev/input_agent
+[ "$(getprop ro.vendor.touch.tsa_name)" = gdix_tsa_avr ] || say "WARNING: ro.vendor.touch.tsa_name='$(getprop ro.vendor.touch.tsa_name)'"
 setprop twrp.avr.touch.prepared 1
 
 # --- ADSP (pmic-glink: battery level, charger state, USB-C) ---

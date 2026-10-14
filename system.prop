@@ -9,3 +9,6 @@ ro.crypto.metadata.enabled=true
 
 # QTI Gatekeeper runs in QTEE, not on the SPU
 vendor.gatekeeper.is_security_level_spu=0
+
+# Goodix THP: libgdix_tsc dlopens libgdix_<tsa_name>.so (vendor/build.prop)
+ro.vendor.touch.tsa_name=gdix_tsa_avr
