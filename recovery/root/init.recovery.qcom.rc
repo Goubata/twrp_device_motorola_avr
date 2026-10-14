@@ -55,7 +55,6 @@ on fs
     mkdir /data/vendor/tzstorage 0770 system system
     mkdir /data/vendor/qwes 0755 system system
 
-    install_keyring
     start vendor.qseecomd
     start vendor.minkdaemon
     start vendor.keymint
