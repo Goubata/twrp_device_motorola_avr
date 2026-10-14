@@ -51,15 +51,16 @@ on fs
     # hides it, then bind it to the path Android uses.
     mkdir /firmware 0771 system system
     wait /dev/block/bootdevice/by-name/modem${ro.boot.slot_suffix}
-    mount ext4 /dev/block/bootdevice/by-name/modem${ro.boot.slot_suffix} /firmware ro nosuid nodev context=u:object_r:firmware_file:s0
+    # No context= here: firmware_file does not exist in the recovery policy
+    # (the mount fails with EINVAL); recovery is permissive anyway.
+    mount ext4 /dev/block/bootdevice/by-name/modem${ro.boot.slot_suffix} /firmware ro nosuid nodev
     mount none /firmware /vendor/firmware_mnt bind
     write /sys/module/firmware_class/parameters/path /firmware/image
 
     # QTEE storage listener working directories. /data is still the ramdisk
-    # here; Android creates the same directories on the real /data.
-    mkdir /data/vendor 0771 root system
-    mkdir /data/vendor/tzstorage 0770 system system
-    mkdir /data/vendor/qwes 0755 system system
+    # here; Android creates the same directories on the real /data. Never use
+    # init's mkdir under /data in recovery (see avr-mkdirs.sh).
+    exec u:r:recovery:s0 root root -- /system/bin/sh /system/bin/avr-mkdirs.sh
 
     start vendor.qseecomd
     start vendor.minkdaemon
