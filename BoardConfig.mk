@@ -145,6 +145,16 @@ TARGET_RECOVERY_DEVICE_MODULES += debuggerd strace
 RECOVERY_BINARY_SOURCE_FILES += $(TARGET_OUT_EXECUTABLES)/debuggerd
 RECOVERY_BINARY_SOURCE_FILES += $(TARGET_OUT_EXECUTABLES)/strace
 
+# Libraries the tools above need but the TWRP build does not pull in
+# (debuggerd; lpdump/lpdumpd from TW_ENABLE_ALL_PARTITION_TOOLS).
+# scripts/finalize-recovery.py fails the build if any ELF in the ramdisk
+# still has an unresolved NEEDED library.
+TARGET_RECOVERY_DEVICE_MODULES += libdebuggerd_client libprocinfo libsnapshot libfs_mgr_binder
+RECOVERY_LIBRARY_SOURCE_FILES += $(TARGET_OUT_SHARED_LIBRARIES)/libdebuggerd_client.so
+RECOVERY_LIBRARY_SOURCE_FILES += $(TARGET_OUT_SHARED_LIBRARIES)/libprocinfo.so
+RECOVERY_LIBRARY_SOURCE_FILES += $(TARGET_OUT_SHARED_LIBRARIES)/libsnapshot.so
+RECOVERY_LIBRARY_SOURCE_FILES += $(TARGET_OUT_SHARED_LIBRARIES)/libfs_mgr_binder.so
+
 # "service check" is used by avr-crypto-wait.sh to see when KeyMint and
 # Gatekeeper are registered
 TARGET_RECOVERY_DEVICE_MODULES += service

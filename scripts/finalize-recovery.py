@@ -11,8 +11,8 @@ Fails (exit 1) without writing <output.img> if any check fails:
      ramdisk equals the installed system's values given on the command line.
   2. Every file of the device tree's recovery/root and prebuilt/root is in the
      ramdisk with identical content.
-  3. Every ELF under vendor/ in the ramdisk can resolve all its NEEDED
-     libraries inside the ramdisk.
+  3. Every ELF in the ramdisk can resolve all its NEEDED libraries inside
+     the ramdisk (vendor blobs and TWRP's own tools alike).
   4. Executables (vendor/bin, our scripts, service) have the exec bit.
   5. Every service started by our rc files is defined in the ramdisk.
   6. Image layout: header v4, no kernel, no os_version/os_patch_level (like
@@ -120,9 +120,9 @@ for tree in ("recovery/root", "prebuilt/root"):
             n += 1
 ok(f"{n} files checked")
 
-# --- 3. ELF dependency closure for vendor blobs ----------------------------
-print("== 3. NEEDED closure of vendor ELFs")
-search = ["vendor/lib64", "vendor/lib64/hw", "system/lib64"]
+# --- 3. ELF dependency closure for every ELF in the ramdisk ---------------
+print("== 3. NEEDED closure of all ELFs")
+search = ["vendor/lib64", "vendor/lib64/hw", "system/lib64", "system/lib64/hw"]
 
 
 def is_elf(p):
@@ -134,7 +134,7 @@ def is_elf(p):
 
 
 checked = 0
-for root, _, files in os.walk(os.path.join(rd, "vendor")):
+for root, _, files in os.walk(rd):
     if "/firmware_mnt" in root:
         continue  # QTEE TAs, not Android ELFs
     for fn in files:
