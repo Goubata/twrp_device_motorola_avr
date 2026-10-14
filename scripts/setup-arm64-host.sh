@@ -112,9 +112,18 @@ if [ ! -e "$R/.arm64-host" ]; then
     rm -f "$R"/bin/* "$R"/lib/librustc_driver-*.so
     cp -a "$TC/rust-musl-arm64/bin/." "$R/bin/"
     cp -a "$TC/rust-musl-arm64/lib/." "$R/lib/"
+    # AOSP's rustc is a "-dev" channel build that accepts -Z flags; Soong
+    # passes some. The official stable rustc needs RUSTC_BOOTSTRAP=1 for that.
+    for t in rustc rustdoc clippy-driver; do
+        mv "$R/bin/$t" "$R/bin/$t.real"
+        printf '#!/bin/sh\nexport RUSTC_BOOTSTRAP=1\nexec "$(dirname "$0")/%s.real" "$@"\n' "$t" > "$R/bin/$t"
+        chmod 755 "$R/bin/$t"
+    done
     touch "$R/.arm64-host"
 fi
 "$R/bin/rustc" -vV | grep -E '^(release|commit-hash|host)'
+echo 'fn main() {}' > /tmp/arm64-host-z.rs
+"$R/bin/rustc" -Z unstable-options --edition 2021 --crate-type lib /tmp/arm64-host-z.rs -o /tmp/arm64-host-z.rlib && echo "   -Z flags accepted"
 
 echo "== binfmt for leftover x86_64 tools"
 if [ ! -e /proc/sys/fs/binfmt_misc/qemu-x86_64 ]; then
