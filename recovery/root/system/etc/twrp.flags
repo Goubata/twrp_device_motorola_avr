@@ -1,12 +1,12 @@
 # mount point      fstype  device                                         device2  flags
 # Logical partitions (super, mot_dp_group)
-/system            erofs   system                                                  flags=display="System";logical;slotselect
-/system_ext        erofs   system_ext                                              flags=display="System_EXT";logical;slotselect
-/product           erofs   product                                                 flags=display="Product";logical;slotselect
-/vendor            erofs   vendor                                                  flags=display="Vendor";logical;slotselect
-/vendor_dlkm       erofs   vendor_dlkm                                             flags=display="Vendor_DLKM";logical;slotselect
-/system_dlkm       erofs   system_dlkm                                             flags=display="System_DLKM";logical;slotselect
-/odm               erofs   odm                                                     flags=display="ODM";logical;slotselect
+/system            erofs   system                                                  flags=display="System"
+/system_ext        erofs   system_ext                                              flags=display="System_EXT"
+/product           erofs   product                                                 flags=display="Product"
+/vendor            erofs   vendor                                                  flags=display="Vendor"
+/vendor_dlkm       erofs   vendor_dlkm                                             flags=display="Vendor_DLKM"
+/system_dlkm       erofs   system_dlkm                                             flags=display="System_DLKM"
+/odm               erofs   odm                                                     flags=display="ODM"
 
 # Metadata
 /metadata          f2fs    /dev/block/bootdevice/by-name/metadata                  flags=display="Metadata";backup=1

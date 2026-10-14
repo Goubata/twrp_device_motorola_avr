@@ -49,6 +49,12 @@ on fs
     mount none /firmware /vendor/firmware_mnt bind
     write /sys/module/firmware_class/parameters/path /firmware/image
 
+    # QTEE storage listener working directories. /data is still the ramdisk
+    # here; Android creates the same directories on the real /data.
+    mkdir /data/vendor 0771 root system
+    mkdir /data/vendor/tzstorage 0770 system system
+    mkdir /data/vendor/qwes 0755 system system
+
     install_keyring
     start vendor.qseecomd
     start vendor.minkdaemon

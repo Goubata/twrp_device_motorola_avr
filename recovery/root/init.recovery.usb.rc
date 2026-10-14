@@ -89,6 +89,10 @@ on property:sys.usb.config=mtp && property:sys.usb.configfs=1
     rm /config/usb_gadget/g1/configs/b.1/f1
     rm /config/usb_gadget/g1/configs/b.1/f2
     write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp"
+    # TWRP sets sys.usb.config before forking its MTP server; binding the
+    # gadget before the server has written its descriptors fails, so wait
+    # for the endpoints to appear first.
+    wait /dev/usb-ffs/mtp/ep1 2
     write /config/usb_gadget/g1/idProduct 0x2e82
     symlink /config/usb_gadget/g1/functions/ffs.mtp /config/usb_gadget/g1/configs/b.1/f1
     write /config/usb_gadget/g1/UDC ${sys.usb.controller}
@@ -99,6 +103,10 @@ on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mtp,adb && property:s
     rm /config/usb_gadget/g1/configs/b.1/f1
     rm /config/usb_gadget/g1/configs/b.1/f2
     write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_adb"
+    # TWRP sets sys.usb.config before forking its MTP server; binding the
+    # gadget before the server has written its descriptors fails, so wait
+    # for the endpoints to appear first.
+    wait /dev/usb-ffs/mtp/ep1 2
     write /config/usb_gadget/g1/idProduct 0x2e76
     symlink /config/usb_gadget/g1/functions/ffs.mtp /config/usb_gadget/g1/configs/b.1/f1
     symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
