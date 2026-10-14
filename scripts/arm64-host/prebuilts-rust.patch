@@ -1,3 +1,19 @@
+diff --git a/Android.bp b/Android.bp
+index 9630f12..9d71739 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -108,7 +108,10 @@ rust_defaults {
+             enabled: false,
+         },
+         musl_arm64: {
+-            enabled: true,
++            // Disabled for aarch64 Linux build hosts: there the host itself
++            // is musl_arm64 and uses the prebuilt std that ships with the
++            // rustc it runs (rustprebuilts.go), which proc-macros need.
++            enabled: false,
+         },
+     },
+     min_sdk_version: "29",
 diff --git a/soong/rustprebuilts.go b/soong/rustprebuilts.go
 index 1a0df62..b228662 100644
 --- a/soong/rustprebuilts.go
