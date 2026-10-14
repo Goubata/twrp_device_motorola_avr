@@ -49,6 +49,14 @@ else
     git -C "$SRC/build/soong" apply "$PATCH"
 fi
 
+echo "== prebuilts/rust: host std for aarch64 musl hosts"
+PATCH="$(dirname "$(realpath "$0")")/arm64-host/prebuilts-rust.patch"
+if git -C "$SRC/prebuilts/rust" apply --reverse --check "$PATCH" 2>/dev/null; then
+    echo "   already applied"
+else
+    git -C "$SRC/prebuilts/rust" apply "$PATCH"
+fi
+
 echo "== Go"
 rm -rf "$SRC/prebuilts/go/linux-arm64"
 cp -a "$TC/go-arm64" "$SRC/prebuilts/go/linux-arm64"
