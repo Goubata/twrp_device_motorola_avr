@@ -7,6 +7,11 @@ on:
         description: "TWRP manifest branch (TWRP-Test/platform_manifest_twrp_aosp)"
         required: true
         default: "twrp-16.0"
+      USE_PINNED_MANIFEST:
+        description: "Sync the exact source revisions in manifest-pinned.xml (last device-tested build) instead of the branch heads"
+        required: true
+        type: boolean
+        default: true
 
 jobs:
   build:
@@ -53,6 +58,10 @@ jobs:
     - name: Sync source
       run: |
         repo init -u https://github.com/TWRP-Test/platform_manifest_twrp_aosp -b ${{ github.event.inputs.TWRP_MANIFEST_BRANCH }} --depth=1
+        if [ "${{ github.event.inputs.USE_PINNED_MANIFEST }}" = true ]; then
+          cp device-tree/manifest-pinned.xml .repo/manifests/avr-pinned.xml
+          repo init -m avr-pinned.xml
+        fi
         (while true; do echo "Syncing source..."; sleep 60; done) &
         TIP_PID=$!
         repo sync -c --no-tags --no-clone-bundle -j$(nproc --all) || repo sync -c --no-tags --no-clone-bundle -j4
@@ -89,6 +98,7 @@ jobs:
 
     - name: Verify and finalize
       run: |
+        set -o pipefail
         OUT=out/target/product/avr
         mkdir -p release
         python3 device/motorola/avr/scripts/finalize-recovery.py \
@@ -96,7 +106,7 @@ jobs:
           "$AVR_OS_VERSION" "$AVR_OS_PATCH" "$AVR_VENDOR_PATCH" \
           system/tools/mkbootimg | tee release/verify.log
         cd release
-        sha256sum twrp-avr-recovery.img > twrp-avr-recovery.img.sha256
+        sha256sum twrp-avr-recovery.img twrp-avr-recovery-nokernel.img > twrp-avr-recovery.img.sha256
         cat twrp-avr-recovery.img.sha256
 
     - name: Collect ramdisk listing

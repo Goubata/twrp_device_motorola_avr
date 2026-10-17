@@ -5,18 +5,26 @@ usage: finalize-recovery.py <built recovery.img> <device tree dir> <output.img>
                             <os_version> <os_patch> <vendor_patch>
                             <mkbootimg dir (system/tools/mkbootimg)>
 
-Fails (exit 1) without writing <output.img> if any check fails:
+Writes two images with the same ramdisk:
+  <output.img>          with the stock kernel (<device tree>/kernel/Image), so
+                        recovery does not depend on the kernel in boot_a
+  <output>-nokernel.img ramdisk only, exactly like the stock recovery_a (the
+                        bootloader then takes the kernel from boot_a)
+
+Fails (exit 1) without writing anything if any check fails:
   1. KeyMint environment props: every definition of ro.build.version.release,
      ro.build.version.security_patch and ro.vendor.build.security_patch in the
      ramdisk equals the installed system's values given on the command line.
+     Same check for the touch (tsa_name) and recovery USB ID props.
   2. Every file of the device tree's recovery/root and prebuilt/root is in the
      ramdisk with identical content.
   3. Every ELF in the ramdisk can resolve all its NEEDED libraries inside
      the ramdisk (vendor blobs and TWRP's own tools alike).
   4. Executables (vendor/bin, our scripts, service) have the exec bit.
   5. Every service started by our rc files is defined in the ramdisk.
-  6. Image layout: header v4, no kernel, no os_version/os_patch_level (like
-     the stock recovery_a), LZ4-legacy ramdisk, fits the 128 MiB partition.
+  6. Image layout: header v4, no os_version/os_patch_level (like the stock
+     recovery_a), LZ4-legacy ramdisk, fits the 128 MiB partition; the kernel
+     matches kernel/Image.sha256 and is the stock GKI build.
 """
 import hashlib, os, re, shutil, stat, subprocess, sys, tempfile
 
@@ -50,7 +58,7 @@ if "boot image header version: 4" not in info:
     err("built image is not boot header v4")
 kernel = os.path.join(unpack, "kernel")
 if os.path.exists(kernel) and os.path.getsize(kernel) != 0:
-    err("built image contains a kernel (recovery_a must be ramdisk-only)")
+    err("built image contains a kernel (the TWRP build must not add its own)")
 ramdisk_lz4 = os.path.join(unpack, "ramdisk")
 with open(ramdisk_lz4, "rb") as f:
     magic = f.read(4)
@@ -73,11 +81,17 @@ subprocess.run(["cpio", "-idm", "--quiet", "--no-absolute-filenames", "-F", cpio
                cwd=rd, check=True)
 
 # --- 1. KeyMint environment props ------------------------------------------
-print("== 1. KeyMint environment props")
+print("== 1. KeyMint environment props (+ touch and USB props)")
 want = {
     "ro.build.version.release": want_rel,
     "ro.build.version.security_patch": want_sp,
     "ro.vendor.build.security_patch": want_vsp,
+    # odm_tsc (touch) dlopens libgdix_<ro.vendor.touch.tsa_name>.so
+    "ro.vendor.touch.tsa_name": "gdix_tsa_avr",
+    # written by TWRP's init.rc gadget triggers (adb, sideload, fastboot)
+    "ro.recovery.usb.vid": "22B8",
+    "ro.recovery.usb.adb.pid": "2E81",
+    "ro.recovery.usb.fastboot.pid": "2E80",
 }
 found = {k: [] for k in want}
 for root, _, files in os.walk(rd):
@@ -91,18 +105,6 @@ for root, _, files in os.walk(rd):
             k, _, v = line.strip().partition("=")
             if k in want:
                 found[k].append((os.path.relpath(p, rd), v))
-# Not KeyMint, but odm_tsc (touch) cannot work without it: libgdix_tsc
-# dlopens libgdix_<ro.vendor.touch.tsa_name>.so.
-want["ro.vendor.touch.tsa_name"] = "gdix_tsa_avr"
-found["ro.vendor.touch.tsa_name"] = []
-for root, _, files in os.walk(rd):
-    for fn in files:
-        p = os.path.join(root, fn)
-        if (fn.endswith(".prop") or fn in ("prop.default", "default.prop")) and not os.path.islink(p):
-            for line in open(p, errors="replace"):
-                k, _, v = line.strip().partition("=")
-                if k == "ro.vendor.touch.tsa_name":
-                    found[k].append((os.path.relpath(p, rd), v))
 for k, v in want.items():
     if not found[k]:
         err(f"{k} is not defined anywhere in the ramdisk")
@@ -206,23 +208,51 @@ for s in sorted(started):
 
 # --- 6b. repack like the stock recovery_a ------------------------------------
 print("== 6. repack")
+stock_kernel = os.path.join(dev, "kernel", "Image")
+want_ksha = open(stock_kernel + ".sha256").read().split()[0]
+ksha = hashlib.sha256(open(stock_kernel, "rb").read()).hexdigest()
+if ksha != want_ksha:
+    err(f"kernel/Image sha256 {ksha} != kernel/Image.sha256 {want_ksha}")
+kver = re.search(rb"Linux version [^\n\0]+", open(stock_kernel, "rb").read())
+kver = kver.group().decode(errors="replace") if kver else ""
+print(f"  kernel: {kver}")
+if "-ab" not in kver or "android (" not in kver.lower():
+    err("kernel/Image is not a stock GKI build (AOSP clang, ab build id)")
 if errors:
     print(f"\n{len(errors)} check(s) failed, not writing {out_img}")
     sys.exit(1)
-run(sys.executable, os.path.join(mkbootimg_dir, "mkbootimg.py"),
-    "--header_version", "4", "--ramdisk", ramdisk_lz4, "--output", out_img)
-size = os.path.getsize(out_img)
-if size > PART_SIZE:
-    os.remove(out_img)
-    print(f"  FAIL: {size} bytes does not fit recovery_a ({PART_SIZE})")
-    sys.exit(1)
-info2 = run(sys.executable, os.path.join(mkbootimg_dir, "unpack_bootimg.py"),
-            "--boot_img", out_img, "--out", os.path.join(tmp, "check"), text=True).stdout
-print(info2)
-if "os version: None" not in info2 or "os patch level: None" not in info2:
-    os.remove(out_img)
-    print("  FAIL: repacked image carries an os_version/os_patch_level")
-    sys.exit(1)
-ok(f"{out_img}: {size} bytes, header v4, ramdisk only, no os_version")
+
+
+def repack(path, with_kernel):
+    args = ["--header_version", "4", "--ramdisk", ramdisk_lz4, "--output", path]
+    if with_kernel:
+        args += ["--kernel", stock_kernel]
+    run(sys.executable, os.path.join(mkbootimg_dir, "mkbootimg.py"), *args)
+    size = os.path.getsize(path)
+    chk = os.path.join(tmp, "check-" + os.path.basename(path))
+    info2 = run(sys.executable, os.path.join(mkbootimg_dir, "unpack_bootimg.py"),
+                "--boot_img", path, "--out", chk, text=True).stdout
+    print(info2)
+    problem = None
+    if size > PART_SIZE:
+        problem = f"{size} bytes does not fit recovery_a ({PART_SIZE})"
+    elif "os version: None" not in info2 or "os patch level: None" not in info2:
+        problem = "repacked image carries an os_version/os_patch_level"
+    else:
+        k = os.path.join(chk, "kernel")
+        got = hashlib.sha256(open(k, "rb").read()).hexdigest() if os.path.exists(k) else None
+        if with_kernel and got != ksha:
+            problem = "kernel in the repacked image differs from kernel/Image"
+        if not with_kernel and os.path.exists(k) and os.path.getsize(k):
+            problem = "ramdisk-only image contains a kernel"
+    if problem:
+        os.remove(path)
+        print(f"  FAIL: {problem}")
+        sys.exit(1)
+    ok(f"{path}: {size} bytes, header v4, {'stock kernel + ramdisk' if with_kernel else 'ramdisk only'}, no os_version")
+
+
+repack(out_img, True)
+repack(re.sub(r"\.img$", "", out_img) + "-nokernel.img", False)
 shutil.rmtree(tmp)
 print("\nall checks passed")

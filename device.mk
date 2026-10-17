@@ -33,3 +33,12 @@ PRODUCT_COPY_FILES += \
 # Vendor blobs extracted from the device by extract-files.py
 PRODUCT_COPY_FILES += \
     $(call find-copy-subdir-files,*,$(DEVICE_PATH)/prebuilt/root,recovery/root)
+
+# USB IDs used by TWRP's own init.rc gadget triggers (adb, sideload,
+# fastboot). Defaults are Google's 18D1:D001/4EE0; use the stock Motorola
+# recovery IDs so they match init.recovery.usb.rc and the host never sees a
+# different device in between.
+PRODUCT_VENDOR_PROPERTIES += \
+    ro.recovery.usb.vid=22B8 \
+    ro.recovery.usb.adb.pid=2E81 \
+    ro.recovery.usb.fastboot.pid=2E80

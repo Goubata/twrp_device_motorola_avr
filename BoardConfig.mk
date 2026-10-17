@@ -203,6 +203,9 @@ TW_EXCLUDE_DEFAULT_USB_INIT := true
 TW_LOAD_VENDOR_MODULES := "mmi_annotate.ko mmi_info.ko sensors_class.ko mmi_relay.ko touchscreen_mmi.ko goodix_brl_thp.ko adsp_loader_dlkm.ko"
 TW_LOAD_VENDOR_MODULES_EXCLUDE_GKI := true
 
-TW_BACKUP_EXCLUSIONS := /data/fonts,/data/adb/ap,/data/adb/ksu
+# /data/fonts holds fs-verity protected font updates. KernelSU's /data/adb/ksu
+# is backed up (allowlist, ksud); TWRP itself already skips its huge
+# modules.img (partition.cpp).
+TW_BACKUP_EXCLUSIONS := /data/fonts
 
 include vendor/twrp/config/BoardConfigTWRP.mk
