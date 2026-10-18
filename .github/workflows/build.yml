@@ -1,17 +1,17 @@
-name: Build TWRP (motorola avr)
+name: Build OrangeFox (motorola avr)
 
 on:
   workflow_dispatch:
     inputs:
-      TWRP_MANIFEST_BRANCH:
-        description: "TWRP manifest branch (TWRP-Test/platform_manifest_twrp_aosp)"
+      FOX_MANIFEST_BRANCH:
+        description: "OrangeFox manifest branch (gitlab.com/OrangeFox/Manifest)"
         required: true
-        default: "twrp-16.0"
+        default: "fox_16.0"
       USE_PINNED_MANIFEST:
         description: "Sync the exact source revisions in manifest-pinned.xml (last device-tested build) instead of the branch heads"
         required: true
         type: boolean
-        default: true
+        default: false
 
 jobs:
   build:
@@ -34,7 +34,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@v1.2
       with:
         create-symlink: true
-        key: twrp-avr
+        key: orangefox-avr
 
     - name: Setup zram
       run: |
@@ -51,13 +51,13 @@ jobs:
       run: |
         export DEBIAN_FRONTEND=noninteractive
         sudo apt-get update
-        sudo apt-get install -y repo lz4 cpio binutils
+        sudo apt-get install -y repo lz4 cpio binutils zip unzip
         git config --global user.name "${{ github.actor }}"
         git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
     - name: Sync source
       run: |
-        repo init -u https://github.com/TWRP-Test/platform_manifest_twrp_aosp -b ${{ github.event.inputs.TWRP_MANIFEST_BRANCH }} --depth=1
+        repo init -u https://gitlab.com/OrangeFox/Manifest.git -b ${{ github.event.inputs.FOX_MANIFEST_BRANCH }} --depth=1
         if [ "${{ github.event.inputs.USE_PINNED_MANIFEST }}" = true ]; then
           cp device-tree/manifest-pinned.xml .repo/manifests/avr-pinned.xml
           repo init -m avr-pinned.xml
@@ -80,14 +80,15 @@ jobs:
           echo "$v=$val" >> "$GITHUB_ENV"
         done
 
-    - name: Build TWRP
+    - name: Build OrangeFox
       run: |
+        export FOX_BUILD_DEVICE=avr
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         export CCACHE_EXEC=$(command -v ccache)
         export CCACHE_MAXSIZE=5G
         export USE_CCACHE=1
-        lunch twrp_avr
+        lunch twrp_avr-bp2a-eng
         (while true; do echo "$(date +%T) Building TWRP..."; free -h | sed -n 2p; sleep 60; done) &
         TIP_PID=$!
         set -o pipefail
@@ -102,12 +103,13 @@ jobs:
         OUT=out/target/product/avr
         mkdir -p release
         python3 device/motorola/avr/scripts/finalize-recovery.py \
-          $OUT/recovery.img device/motorola/avr release/twrp-avr-recovery.img \
+          $OUT/recovery.img device/motorola/avr release/orangefox-avr-recovery.img \
           "$AVR_OS_VERSION" "$AVR_OS_PATCH" "$AVR_VENDOR_PATCH" \
           system/tools/mkbootimg | tee release/verify.log
         cd release
-        sha256sum twrp-avr-recovery.img > twrp-avr-recovery.img.sha256
-        cat twrp-avr-recovery.img.sha256
+        sha256sum orangefox-avr-recovery.img > orangefox-avr-recovery.img.sha256
+        cat orangefox-avr-recovery.img.sha256
+        ls -la ../out/target/product/avr/OrangeFox-* 2>/dev/null || true
 
     - name: Collect ramdisk listing
       if: always()
@@ -125,6 +127,6 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: twrp-avr-${{ github.run_number }}
+        name: orangefox-avr-${{ github.run_number }}
         path: release/
         retention-days: 30

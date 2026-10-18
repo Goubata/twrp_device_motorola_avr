@@ -208,4 +208,26 @@ TW_LOAD_VENDOR_MODULES_EXCLUDE_GKI := true
 # modules.img (partition.cpp).
 TW_BACKUP_EXCLUSIONS := /data/fonts
 
+# ---------------------------------------------------------------------------
+# OrangeFox
+# ---------------------------------------------------------------------------
+OF_MAINTAINER := Rakkashin
+# A/B with a dedicated recovery partition (recovery_a/_b), not recovery-in-boot
+OF_AB_DEVICE_WITH_RECOVERY_PARTITION := 1
+# Same LZ4-legacy ramdisk as the stock recovery_a
+OF_USE_LZ4_COMPRESSION := 1
+# Layout in theme units (1080 wide): 3168 * 1080 / 1440 = 2376 high. The
+# center punch hole ends at y=135 px = 101 units, so a 104 unit status bar
+# clears it; the clock goes to the left of the hole.
+OF_SCREEN_H := 2376
+OF_STATUS_H := 104
+OF_STATUS_INDENT_LEFT := 48
+OF_STATUS_INDENT_RIGHT := 48
+OF_CLOCK_POS := 1
+# Torch: PM8550 flash LEDs (leds-qcom-flash, loaded from vendor_boot), white
+# and yellow (dual tone). brightness on these class devices is torch mode.
+OF_FL_PATH1 := /sys/class/leds/white:flash-1
+OF_FL_PATH2 := /sys/class/leds/yellow:flash-0
+OF_QUICK_BACKUP_LIST := /boot;/init_boot;/vendor_boot;/dtbo;/efs1;/persist_image;
+
 include vendor/twrp/config/BoardConfigTWRP.mk
