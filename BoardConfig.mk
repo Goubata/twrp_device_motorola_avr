@@ -170,7 +170,7 @@ TW_EXTRA_LANGUAGES := true
 RECOVERY_SDCARD_ON_DATA := true
 TARGET_RECOVERY_QCOM_RTC_FIX := true
 TW_USE_SERIALNO_PROPERTY_FOR_DEVICE_ID := true
-TW_DEVICE_VERSION := avr
+TW_DEVICE_VERSION := avr-by-Rakkashin
 
 # Display: 1440x3168, center punch hole at x=670..770 (px), y=0..135.
 # Positions are in theme units (portrait_hdpi is 1080 wide): the hole spans

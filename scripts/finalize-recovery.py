@@ -206,6 +206,17 @@ for s in sorted(started):
     else:
         ok(f"service {s}")
 
+# --- 5b. version string shown by TWRP ------------------------------------
+print("== 5b. TWRP version string")
+devver = re.search(r"^TW_DEVICE_VERSION\s*:=\s*(\S+)", open(os.path.join(dev, "BoardConfig.mk")).read(), re.M)
+devver = devver.group(1) if devver else ""
+recbin = open(os.path.join(rd, "system/bin/recovery"), "rb").read()
+shown = re.search(rb"\d+\.\d+\.\d+_\d+-" + re.escape(devver.encode()) + rb"(?![\w-])", recbin) if devver else None
+if not shown:
+    err(f"TWRP version string with '-{devver}' not found in system/bin/recovery")
+else:
+    ok(f"version: {shown.group().decode()}")
+
 # --- 6b. repack like the stock recovery_a ------------------------------------
 print("== 6. repack")
 stock_kernel = os.path.join(dev, "kernel", "Image")
