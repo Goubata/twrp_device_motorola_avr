@@ -131,6 +131,18 @@ for tree in ("recovery/root", "prebuilt/root"):
             n += 1
 ok(f"{n} files checked")
 
+# OrangeFox's system/core always creates odm/etc -> /vendor/odm/etc in the
+# ramdisk, so the avr odm ueventd.rc ships under vendor/odm/etc instead.
+odm_etc = os.path.join(rd, "odm/etc")
+if os.path.islink(odm_etc):
+    t = os.readlink(odm_etc)
+    if t != "/vendor/odm/etc":
+        err(f"odm/etc -> {t}, expected /vendor/odm/etc")
+    else:
+        ok("odm/etc -> /vendor/odm/etc (ueventd.rc reachable)")
+elif not os.path.isfile(os.path.join(odm_etc, "ueventd.rc")):
+    err("odm/etc/ueventd.rc not reachable")
+
 # --- 3. ELF dependency closure for every ELF in the ramdisk ---------------
 print("== 3. NEEDED closure of all ELFs")
 search = ["vendor/lib64", "vendor/lib64/hw", "system/lib64", "system/lib64/hw"]
