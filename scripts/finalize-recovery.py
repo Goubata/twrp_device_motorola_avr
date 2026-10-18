@@ -5,11 +5,9 @@ usage: finalize-recovery.py <built recovery.img> <device tree dir> <output.img>
                             <os_version> <os_patch> <vendor_patch>
                             <mkbootimg dir (system/tools/mkbootimg)>
 
-Writes two images with the same ramdisk:
-  <output.img>          with the stock kernel (<device tree>/kernel/Image), so
-                        recovery does not depend on the kernel in boot_a
-  <output>-nokernel.img ramdisk only, exactly like the stock recovery_a (the
-                        bootloader then takes the kernel from boot_a)
+The output is ramdisk-only, exactly like the stock recovery_a; the
+bootloader takes the kernel from boot_a. (A recovery_a that carries its own
+kernel is rejected by the avr bootloader with a red "corrupt" warning.)
 
 Fails (exit 1) without writing anything if any check fails:
   1. KeyMint environment props: every definition of ro.build.version.release,
@@ -22,9 +20,8 @@ Fails (exit 1) without writing anything if any check fails:
      the ramdisk (vendor blobs and TWRP's own tools alike).
   4. Executables (vendor/bin, our scripts, service) have the exec bit.
   5. Every service started by our rc files is defined in the ramdisk.
-  6. Image layout: header v4, no os_version/os_patch_level (like the stock
-     recovery_a), LZ4-legacy ramdisk, fits the 128 MiB partition; the kernel
-     matches kernel/Image.sha256 and is the stock GKI build.
+  6. Image layout: header v4, no kernel, no os_version/os_patch_level (like
+     the stock recovery_a), LZ4-legacy ramdisk, fits the 128 MiB partition.
 """
 import hashlib, os, re, shutil, stat, subprocess, sys, tempfile
 
@@ -219,51 +216,31 @@ else:
 
 # --- 6b. repack like the stock recovery_a ------------------------------------
 print("== 6. repack")
-stock_kernel = os.path.join(dev, "kernel", "Image")
-want_ksha = open(stock_kernel + ".sha256").read().split()[0]
-ksha = hashlib.sha256(open(stock_kernel, "rb").read()).hexdigest()
-if ksha != want_ksha:
-    err(f"kernel/Image sha256 {ksha} != kernel/Image.sha256 {want_ksha}")
-kver = re.search(rb"Linux version [^\n\0]+", open(stock_kernel, "rb").read())
-kver = kver.group().decode(errors="replace") if kver else ""
-print(f"  kernel: {kver}")
-if "-ab" not in kver or "android (" not in kver.lower():
-    err("kernel/Image is not a stock GKI build (AOSP clang, ab build id)")
 if errors:
     print(f"\n{len(errors)} check(s) failed, not writing {out_img}")
     sys.exit(1)
-
-
-def repack(path, with_kernel):
-    args = ["--header_version", "4", "--ramdisk", ramdisk_lz4, "--output", path]
-    if with_kernel:
-        args += ["--kernel", stock_kernel]
-    run(sys.executable, os.path.join(mkbootimg_dir, "mkbootimg.py"), *args)
-    size = os.path.getsize(path)
-    chk = os.path.join(tmp, "check-" + os.path.basename(path))
-    info2 = run(sys.executable, os.path.join(mkbootimg_dir, "unpack_bootimg.py"),
-                "--boot_img", path, "--out", chk, text=True).stdout
-    print(info2)
+run(sys.executable, os.path.join(mkbootimg_dir, "mkbootimg.py"),
+    "--header_version", "4", "--ramdisk", ramdisk_lz4, "--output", out_img)
+size = os.path.getsize(out_img)
+if size > PART_SIZE:
+    os.remove(out_img)
+    print(f"  FAIL: {size} bytes does not fit recovery_a ({PART_SIZE})")
+    sys.exit(1)
+chk = os.path.join(tmp, "check")
+info2 = run(sys.executable, os.path.join(mkbootimg_dir, "unpack_bootimg.py"),
+            "--boot_img", out_img, "--out", chk, text=True).stdout
+print(info2)
+k = os.path.join(chk, "kernel")
+if "os version: None" not in info2 or "os patch level: None" not in info2:
+    problem = "repacked image carries an os_version/os_patch_level"
+elif os.path.exists(k) and os.path.getsize(k):
+    problem = "repacked image contains a kernel (the avr bootloader rejects that)"
+else:
     problem = None
-    if size > PART_SIZE:
-        problem = f"{size} bytes does not fit recovery_a ({PART_SIZE})"
-    elif "os version: None" not in info2 or "os patch level: None" not in info2:
-        problem = "repacked image carries an os_version/os_patch_level"
-    else:
-        k = os.path.join(chk, "kernel")
-        got = hashlib.sha256(open(k, "rb").read()).hexdigest() if os.path.exists(k) else None
-        if with_kernel and got != ksha:
-            problem = "kernel in the repacked image differs from kernel/Image"
-        if not with_kernel and os.path.exists(k) and os.path.getsize(k):
-            problem = "ramdisk-only image contains a kernel"
-    if problem:
-        os.remove(path)
-        print(f"  FAIL: {problem}")
-        sys.exit(1)
-    ok(f"{path}: {size} bytes, header v4, {'stock kernel + ramdisk' if with_kernel else 'ramdisk only'}, no os_version")
-
-
-repack(out_img, True)
-repack(re.sub(r"\.img$", "", out_img) + "-nokernel.img", False)
+if problem:
+    os.remove(out_img)
+    print(f"  FAIL: {problem}")
+    sys.exit(1)
+ok(f"{out_img}: {size} bytes, header v4, ramdisk only, no os_version")
 shutil.rmtree(tmp)
 print("\nall checks passed")

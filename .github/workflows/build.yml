@@ -106,7 +106,7 @@ jobs:
           "$AVR_OS_VERSION" "$AVR_OS_PATCH" "$AVR_VENDOR_PATCH" \
           system/tools/mkbootimg | tee release/verify.log
         cd release
-        sha256sum twrp-avr-recovery.img twrp-avr-recovery-nokernel.img > twrp-avr-recovery.img.sha256
+        sha256sum twrp-avr-recovery.img > twrp-avr-recovery.img.sha256
         cat twrp-avr-recovery.img.sha256
 
     - name: Collect ramdisk listing
