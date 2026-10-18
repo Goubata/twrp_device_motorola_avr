@@ -34,6 +34,12 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(call find-copy-subdir-files,*,$(DEVICE_PATH)/prebuilt/root,recovery/root)
 
+# OrangeFox's bootable/recovery only installs task_profiles.json to /system;
+# TWRP put it in the recovery ramdisk, so init and libprocessgroup in recovery
+# can apply the task_profiles of keystore2, snapuserd and vndservicemanager.
+PRODUCT_COPY_FILES += \
+    system/core/libprocessgroup/profiles/task_profiles.json:recovery/root/system/etc/task_profiles.json
+
 # USB IDs used by TWRP's own init.rc gadget triggers (adb, sideload,
 # fastboot). Defaults are Google's 18D1:D001/4EE0; use the stock Motorola
 # recovery IDs so they match init.recovery.usb.rc and the host never sees a

@@ -142,6 +142,11 @@ if os.path.islink(odm_etc):
         ok("odm/etc -> /vendor/odm/etc (ueventd.rc reachable)")
 elif not os.path.isfile(os.path.join(odm_etc, "ueventd.rc")):
     err("odm/etc/ueventd.rc not reachable")
+for rel in ("system/etc/task_profiles.json", "system/etc/cgroups.json"):
+    if os.path.isfile(os.path.join(rd, rel)):
+        ok(f"{rel} present")
+    else:
+        err(f"{rel} missing")
 
 # --- 3. ELF dependency closure for every ELF in the ramdisk ---------------
 print("== 3. NEEDED closure of all ELFs")
