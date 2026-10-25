@@ -1,0 +1,13 @@
+<!-- Recovery framework manifest: keystore2 must register before data decryption.
+     OrangeFox does not install the keystore2 VINTF fragment into recovery.
+     Keep this declaration aligned with system/security/keystore2. -->
+<manifest version="1.0" type="framework">
+    <hal format="aidl">
+        <name>android.system.keystore2</name>
+        <version>5</version>
+        <interface>
+            <name>IKeystoreService</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+</manifest>

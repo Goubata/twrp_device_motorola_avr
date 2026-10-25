@@ -24,6 +24,7 @@ Fails (exit 1) without writing anything if any check fails:
      the stock recovery_a), LZ4-legacy ramdisk, fits the 128 MiB partition.
 """
 import hashlib, os, re, shutil, stat, subprocess, sys, tempfile
+import xml.etree.ElementTree as ET
 
 (built, dev, out_img, want_rel, want_sp, want_vsp, mkbootimg_dir) = sys.argv[1:8]
 PART_SIZE = 134217728
@@ -147,6 +148,32 @@ for rel in ("system/etc/task_profiles.json", "system/etc/cgroups.json"):
         ok(f"{rel} present")
     else:
         err(f"{rel} missing")
+
+# keystore2 aborts if servicemanager cannot find its VINTF declaration.
+# Check the source declaration too: a future interface version change must
+# fail CI rather than produce an image that hangs on the splash screen.
+print("== 2b. keystore2 VINTF declaration")
+try:
+    manifest_path = os.path.join(rd, "system/etc/vintf/manifest.xml")
+    declaration = ET.parse(manifest_path).getroot()
+    services = [hal for hal in declaration.findall("hal")
+                if hal.findtext("name") == "android.system.keystore2"]
+    if declaration.get("type") != "framework" or len(services) != 1:
+        raise ValueError("expected one keystore2 declaration in framework manifest")
+    hal = services[0]
+    if (hal.get("format") != "aidl" or hal.findtext("version") != "5"
+            or hal.findtext("interface/name") != "IKeystoreService"
+            or hal.findtext("interface/instance") != "default"):
+        raise ValueError("expected AIDL v5 IKeystoreService/default")
+    source = os.path.join(mkbootimg_dir, "../../../system/security/keystore2",
+                          "android.system.keystore2-service.xml")
+    source_hal = ET.parse(source).getroot().find("hal")
+    if (source_hal is None or source_hal.findtext("name") != "android.system.keystore2"
+            or source_hal.findtext("version") != hal.findtext("version")):
+        raise ValueError("keystore2 source VINTF version differs from recovery")
+    ok("keystore2 AIDL v5 IKeystoreService/default declared in recovery")
+except (OSError, ET.ParseError, ValueError) as exc:
+    err(f"keystore2 VINTF: {exc}")
 
 # --- 3. ELF dependency closure for every ELF in the ramdisk ---------------
 print("== 3. NEEDED closure of all ELFs")
