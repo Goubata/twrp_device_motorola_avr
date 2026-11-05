@@ -1,4 +1,4 @@
-name: Build OrangeFox (motorola avr)
+name: Build OrangeFox (motorola avr / COS 17)
 
 on:
   workflow_dispatch:
@@ -30,11 +30,14 @@ jobs:
       with:
         path: device-tree
 
+    - name: Validate COS KeyMint guard
+      run: python3 device-tree/scripts/test-cos-keymint.py
+
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:
         create-symlink: true
-        key: orangefox-avr
+        key: orangefox-avr-cos
 
     - name: Setup zram
       run: |
@@ -103,12 +106,12 @@ jobs:
         OUT=out/target/product/avr
         mkdir -p release
         python3 device/motorola/avr/scripts/finalize-recovery.py \
-          $OUT/recovery.img device/motorola/avr release/orangefox-avr-recovery.img \
+          $OUT/recovery.img device/motorola/avr release/orangefox-avr-cos-recovery.img \
           "$AVR_OS_VERSION" "$AVR_OS_PATCH" "$AVR_VENDOR_PATCH" \
           system/tools/mkbootimg | tee release/verify.log
         cd release
-        sha256sum orangefox-avr-recovery.img > orangefox-avr-recovery.img.sha256
-        cat orangefox-avr-recovery.img.sha256
+        sha256sum orangefox-avr-cos-recovery.img > orangefox-avr-cos-recovery.img.sha256
+        cat orangefox-avr-cos-recovery.img.sha256
         ls -la ../out/target/product/avr/OrangeFox-* 2>/dev/null || true
 
     - name: Collect ramdisk listing
@@ -127,6 +130,6 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: orangefox-avr-${{ github.run_number }}
+        name: orangefox-avr-cos-${{ github.run_number }}
         path: release/
         retention-days: 30

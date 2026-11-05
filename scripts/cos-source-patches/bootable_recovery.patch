@@ -1,0 +1,67 @@
+--- a/partitionmanager.cpp
++++ b/partitionmanager.cpp
+@@ -573,8 +573,9 @@
+ 				} else {
+ 					property_set("twrp.apex.loaded", "true");
+ 				}
+-				TWFunc::check_and_run_script("/sbin/resyncapex.sh", "apex");
+ 	#endif
++				// Run the AVR check even when APEX loading is disabled or fails.
++				TWFunc::check_and_run_script("/system/bin/resyncapex.sh", "AVR KeyMint");
+ 			}
+ 		}
+ 	#ifndef USE_VENDOR_LIBS
+@@ -669,6 +670,10 @@
+ }
+ 
+ void TWPartitionManager::Decrypt_Data() {
++    if (android::base::GetProperty("twrp.avr.keymint_env", "") != "ok") {
++        LOGERR("AVR COS: refusing metadata decryption without a verified KeyMint environment\n");
++        return;
++    }
+ 	#ifdef TW_INCLUDE_CRYPTO
+ 	TWPartition* Decrypt_Data = Find_Partition_By_Path("/data");
+ 	if (Decrypt_Data && Decrypt_Data->Is_Encrypted && !Decrypt_Data->Is_Decrypted) {
+--- a/twrpApex.cpp
++++ b/twrpApex.cpp
+@@ -152,15 +152,19 @@
+ 
+ 	memset(&info, 0, sizeof(struct loop_info64));
+ 	strlcpy((char*)info.lo_crypt_name, "twrpApex", LO_NAME_SIZE);
+-	off_t apex_size = lseek(fd, 0, SEEK_END);
+-	info.lo_sizelimit = apex_size;
++	// fd was closed after LOOP_SET_FD. lseek(fd) would return -1,
++	// overflowing lo_sizelimit. Zero exposes the full backing file.
++	info.lo_sizelimit = 0;
+ 	if (ioctl(loop_fd, LOOP_SET_STATUS64, &info)) {
+ 		LOGERR("failed to mount loop: %s: %s\n", fileToMount.c_str(), strerror(errno));
++		ioctl(loop_fd, LOOP_CLR_FD, 0);
+ 		close(loop_fd);
+ 		return false;
+ 	}
+ 	if (ioctl(loop_fd, BLKFLSBUF, 0) == -1) {
+ 		LOGERR("Unable to flush loop device buffers\n");
++		ioctl(loop_fd, LOOP_CLR_FD, 0);
++		close(loop_fd);
+ 		return false;
+ 	}
+ 	if (ioctl(loop_fd, LOOP_SET_BLOCK_SIZE, 4096) == -1) {
+@@ -174,13 +178,16 @@
+ 
+ 	bind_mount = bind_mount + basename(apex_cleaned_mount.c_str());
+ 
+-	int ret = mkdir(bind_mount.c_str(), 0666);
+-	if (ret != 0) {
++	int ret = mkdir(bind_mount.c_str(), 0755);
++	if (ret != 0 && errno != EEXIST) {
+ 		LOGERR("Unable to create bind mount directory: %s\n", bind_mount.c_str());
+ 		return false;
+ 	}
+ 
+ 	ret = mount(loop_device.c_str(), bind_mount.c_str(), "ext4", MS_RDONLY, nullptr);
++	if (ret != 0) {
++		ret = mount(loop_device.c_str(), bind_mount.c_str(), "erofs", MS_RDONLY, nullptr);
++	}
+ 	if (ret != 0) {
+ 		LOGERR("unable to mount loop device %s to %s. Reason: %s\n", loop_device.c_str(), bind_mount.c_str(), strerror(errno));
+ 		return false;

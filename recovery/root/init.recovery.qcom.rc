@@ -67,6 +67,11 @@ on fs
 
     start vendor.qseecomd
     start vendor.minkdaemon
+    # Capture the exact values before KeyMint starts. The recovery UI may
+    # override public properties later; that cannot reconfigure the HAL.
+    setprop twrp.avr.keymint.boot_release ${ro.build.version.release}
+    setprop twrp.avr.keymint.boot_patch ${ro.build.version.security_patch}
+    setprop twrp.avr.keymint.boot_vendor_patch ${ro.vendor.build.security_patch}
     start vendor.keymint
     start vendor.gatekeeper_default
     start vendor.secretkeeper

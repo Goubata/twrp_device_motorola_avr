@@ -114,11 +114,13 @@ TW_USE_FSCRYPT_POLICY := 2
 # vendor.keymint starts). Recovery must report exactly what the installed
 # system reports, otherwise the TEE either rejects the blobs or upgrades them
 # to a level Android cannot use. Do NOT use the usual TWRP 99.87.36/2099-12-31.
-# Update these after every OTA (scripts/finalize-recovery.sh verifies them
+# Update these after every OTA (scripts/finalize-recovery.py verifies them
 # against the values the workflow was given, and the ramdisk hook
 # system/bin/resyncapex.sh refuses to run KeyMint on a mismatch).
-AVR_OS_VERSION := 16
-AVR_OS_PATCH := 2026-06-01
+# COS 17 system on the original AVR Android 16 vendor/firmware.
+# Vendor patch comes from /vendor/build.prop (not late root-module spoofing).
+AVR_OS_VERSION := 17
+AVR_OS_PATCH := 2026-10-01
 AVR_VENDOR_PATCH := 2026-06-01
 PLATFORM_VERSION := $(AVR_OS_VERSION)
 PLATFORM_VERSION_LAST_STABLE := $(PLATFORM_VERSION)
@@ -170,7 +172,7 @@ TW_EXTRA_LANGUAGES := true
 RECOVERY_SDCARD_ON_DATA := true
 TARGET_RECOVERY_QCOM_RTC_FIX := true
 TW_USE_SERIALNO_PROPERTY_FOR_DEVICE_ID := true
-TW_DEVICE_VERSION := avr-by-Rakkashin
+TW_DEVICE_VERSION := avr-cos-by-Rakkashin
 
 # Display: 1440x3168, center punch hole at x=670..770 (px), y=0..135.
 # Positions are in theme units (portrait_hdpi is 1080 wide): the hole spans

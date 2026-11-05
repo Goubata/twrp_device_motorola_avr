@@ -4,8 +4,8 @@
 # usage: apply-source-patches.sh <twrp source dir>
 set -euo pipefail
 SRC=$(realpath "$1")
-DIR="$(dirname "$(realpath "$0")")/source-patches"
-for patch in "$DIR"/*.patch; do
+DIR="$(dirname "$(realpath "$0")")"
+for patch in "$DIR/source-patches"/*.patch "$DIR/cos-source-patches"/*.patch; do
     [ -e "$patch" ] || continue
     proj=$(basename "$patch" .patch | tr _ /)
     if git -C "$SRC/$proj" apply --reverse --check "$patch" 2>/dev/null; then

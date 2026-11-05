@@ -260,6 +260,12 @@ elif maint.encode() + b"\0" not in recbin:
 else:
     ok(f"maintainer: {maint}")
 
+# The COS guard must be called from its installed path and gate decryption.
+for marker in (b"/system/bin/resyncapex.sh\0",
+               b"AVR COS: refusing metadata decryption"):
+    if marker not in recbin:
+        err(f"COS recovery source patch missing: {marker!r}")
+
 # --- 6b. repack like the stock recovery_a ------------------------------------
 print("== 6. repack")
 if errors:

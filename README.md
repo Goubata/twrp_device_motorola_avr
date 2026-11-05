@@ -1,16 +1,19 @@
-# TWRP device tree for motorola avr (XT2611)
+# OrangeFox for motorola avr — COS 17 build
+
+COS-specific branch based on the original AVR recovery tree. See [COS.md](COS.md)
+for the target ROM, diagnosis, build instructions and validation limits.
 
 | | |
 |---|---|
 | SoC | Qualcomm SM8845 (canoe) |
-| Android | 16 (W3WW36.65-25-3-4, security patch 2026-06-01) |
+| Target ROM | COS 17 / Android 17, system patch 2026-10-01, AVR vendor patch 2026-06-01 |
 | Recovery | dedicated `recovery_a/_b`, boot header v4, ramdisk only (kernel from `boot`) |
 | Storage | UFS, F2FS `/data` with FBE v2 + metadata encryption (hardware-wrapped keys) |
 | Display | 1440x3168, 520 dpi, center punch hole |
 | Touch | Goodix THP (`goodix_brl_thp.ko` + `odm_tsc`) |
 
-Built from [TWRP-Test/platform_manifest_twrp_aosp](https://github.com/TWRP-Test/platform_manifest_twrp_aosp)
-`twrp-16.0` with GitHub Actions (`.github/workflows/build.yml`).
+Built from [OrangeFox/Manifest](https://gitlab.com/OrangeFox/Manifest)
+`fox_16.0` with GitHub Actions (`.github/workflows/build.yml`).
 Structure follows [TWRP-Test/twrp_device_xiaomi_sm8850](https://github.com/TWRP-Test/twrp_device_xiaomi_sm8850) (Apache-2.0).
 
 ## Layout
@@ -33,13 +36,14 @@ This recovery reports the values of the installed system (`AVR_OS_VERSION`,
 `99.87.36` / `2099-12-31`. After every OTA, update them from the device and rebuild:
 
 ```sh
-adb shell getprop ro.build.version.release
-adb shell getprop ro.build.version.security_patch
-adb shell getprop ro.vendor.build.security_patch
+adb shell 'grep -E "^ro.build.version.(release|security_patch)=" /system/build.prop'
+adb shell 'grep -F "ro.vendor.build.security_patch=" /vendor/build.prop'
 ```
 
-If they no longer match, `resyncapex.sh` stops KeyMint before decryption (decryption
-fails, nothing is written) and logs the values to use.
+Compare on-disk properties with startup logs: root modules may change `getprop`
+after KeyMint starts. The COS guard compares a snapshot taken before HAL startup
+with the installed files. Missing or mismatched values stop KeyMint and skip
+metadata decryption. Never bypass this check or raise patch levels speculatively.
 
 ## Flashing
 
@@ -48,7 +52,7 @@ and keep the stock image to roll back:
 
 ```sh
 fastboot getvar current-slot
-fastboot flash recovery_a twrp-avr-recovery.img
+fastboot flash recovery_a orangefox-avr-cos-recovery.img
 fastboot reboot recovery
 # roll back:
 fastboot flash recovery_a recovery_a-stock.img
