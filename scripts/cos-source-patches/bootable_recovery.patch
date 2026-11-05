@@ -1,0 +1,25 @@
+--- a/partitionmanager.cpp
++++ b/partitionmanager.cpp
+@@ -497,8 +497,9 @@
+             } else {
+                 android::base::SetProperty("twrp.apex.loaded", "true");
+             }
+-            TWFunc::CheckAndRunScript("/sbin/resyncapex.sh", "apex");
+-#endif
++#endif
++            // Run the AVR check even when APEX loading is disabled or fails.
++            TWFunc::CheckAndRunScript("/system/bin/resyncapex.sh", "AVR KeyMint");
+         }
+     }
+ #ifndef USE_VENDOR_LIBS
+@@ -591,6 +592,10 @@
+ }
+ 
+ void TWPartitionManager::Decrypt_Data() {
++    if (android::base::GetProperty("twrp.avr.keymint_env", "") != "ok") {
++        LOGERR("AVR COS: refusing metadata decryption without a verified KeyMint environment\n");
++        return;
++    }
+ #ifdef TW_INCLUDE_CRYPTO
+     TWPartition *data = Find_Partition_By_Path("/data");
+     if (data && data->Is_Encrypted && !data->Is_Decrypted) {

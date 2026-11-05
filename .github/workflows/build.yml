@@ -1,4 +1,4 @@
-name: Build TWRP (motorola avr)
+name: Build TWRP (motorola avr / COS 17)
 
 on:
   workflow_dispatch:
@@ -30,11 +30,14 @@ jobs:
       with:
         path: device-tree
 
+    - name: Validate COS KeyMint guard
+      run: python3 device-tree/scripts/test-cos-keymint.py
+
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:
         create-symlink: true
-        key: twrp-avr
+        key: twrp-avr-cos
 
     - name: Setup zram
       run: |
@@ -102,12 +105,12 @@ jobs:
         OUT=out/target/product/avr
         mkdir -p release
         python3 device/motorola/avr/scripts/finalize-recovery.py \
-          $OUT/recovery.img device/motorola/avr release/twrp-avr-recovery.img \
+          $OUT/recovery.img device/motorola/avr release/twrp-avr-cos-recovery.img \
           "$AVR_OS_VERSION" "$AVR_OS_PATCH" "$AVR_VENDOR_PATCH" \
           system/tools/mkbootimg | tee release/verify.log
         cd release
-        sha256sum twrp-avr-recovery.img > twrp-avr-recovery.img.sha256
-        cat twrp-avr-recovery.img.sha256
+        sha256sum twrp-avr-cos-recovery.img > twrp-avr-cos-recovery.img.sha256
+        cat twrp-avr-cos-recovery.img.sha256
 
     - name: Collect ramdisk listing
       if: always()
@@ -125,6 +128,6 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: twrp-avr-${{ github.run_number }}
+        name: twrp-avr-cos-${{ github.run_number }}
         path: release/
         retention-days: 30
