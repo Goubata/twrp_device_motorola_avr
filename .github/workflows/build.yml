@@ -1,4 +1,4 @@
-name: Build OrangeFox (motorola avr / COS 17)
+name: Build OrangeFox (motorola avr / COS 17 - pinned manifest)
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ on:
         description: "Sync the exact source revisions in manifest-pinned.xml (last device-tested build) instead of the branch heads"
         required: true
         type: boolean
-        default: false
+        default: true
 
 jobs:
   build:
@@ -24,6 +24,10 @@ jobs:
 
     - name: Maximize build space
       uses: easimon/maximize-build-space@master
+      with:
+        # This action creates disk-backed swap on its LVM volume.
+        # It remains available even if the runner kernel lacks zram.
+        swap-size-mb: 8192
 
     - name: Check out device tree
       uses: actions/checkout@v4
@@ -39,14 +43,43 @@ jobs:
         create-symlink: true
         key: orangefox-avr-cos
 
-    - name: Setup zram
+    - name: Setup zram (fallback to regular disk swap)
+      shell: bash
       run: |
-        sudo apt-get install -y linux-modules-extra-$(uname -r) zram-tools
-        sudo modprobe zram
-        sudo sed -i 's/^#PERCENT=50/PERCENT=90/' /etc/default/zramswap
-        sudo sed -i 's/^#PRIORITY=100/PRIORITY=1000/' /etc/default/zramswap
-        sudo systemctl restart zramswap
-        zramctl
+        set -euo pipefail
+        echo "Runner kernel: $(uname -r)"
+        echo "Trying zram without installing kernel-specific packages..."
+        zram_enabled=false
+        if command -v zramctl >/dev/null 2>&1 && sudo modprobe zram 2>/dev/null; then
+          # Equivalent to the original PERCENT=90 configuration.
+          zram_size_mib=$(awk '/^MemTotal:/ {printf "%d", $2 * 0.90 / 1024}' /proc/meminfo)
+          zram_dev=''
+          if zram_dev=$(sudo zramctl --find --size "${zram_size_mib}M" --algorithm lz4 2>/dev/null) && [ -n "$zram_dev" ]; then
+            if sudo mkswap "$zram_dev" >/dev/null && sudo swapon --priority 1000 "$zram_dev"; then
+              zram_enabled=true
+              echo "zram enabled: $zram_dev (${zram_size_mib} MiB)"
+            else
+              echo "::warning::Could not activate $zram_dev; falling back to regular swap."
+              sudo swapoff "$zram_dev" 2>/dev/null || true
+              sudo zramctl --reset "$zram_dev" 2>/dev/null || true
+            fi
+          else
+            echo "::notice::zramctl could not allocate a zram device."
+          fi
+        else
+          echo "::notice::zram module or zramctl is unavailable on this runner."
+        fi
+
+        if [ "$zram_enabled" != true ]; then
+          echo "Using disk-backed swap provided by maximize-build-space."
+        fi
+        swap_kib=$(awk '/^SwapTotal:/ {print $2}' /proc/meminfo)
+        if [ "${swap_kib:-0}" -le 0 ]; then
+          echo "::error::No active swap (neither zram nor disk swap)."
+          exit 1
+        fi
+        swapon --show
+        zramctl 2>/dev/null || true
         free -h
         df -h .
 
